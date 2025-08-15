@@ -1,4 +1,64 @@
 // ====================================
+// ROUTES - DEBUG
+// ====================================
+
+app.get('/api/debug/search', ensureSpotifyAuth, async (req, res) => {
+  try {
+    const { q = 'test' } = req.query;
+
+    console.log(`DEBUG: Buscando "${q}" com token: ${req.spotifyToken.substring(0, 10)}...`);
+
+    // Teste 1: Busca mais simples possível
+    const response = await axios.get(`${SPOTIFY_API_BASE}/search`, {
+      headers: {
+        'Authorization': `Bearer ${req.spotifyToken}`
+      },
+      params: {
+        q: q,
+        type: 'track',
+        limit: 1  // Apenas 1 resultado
+      }
+    });
+
+    console.log('DEBUG: Busca bem-sucedida!');
+
+    res.json({
+      success: true,
+      debug: true,
+      query: q,
+      token_prefix: req.spotifyToken.substring(0, 10),
+      total_found: response.data.tracks.total,
+      first_track: response.data.tracks.items[0] ? {
+        id: response.data.tracks.items[0].id,
+        name: response.data.tracks.items[0].name,
+        artist: response.data.tracks.items[0].artists[0].name
+      } : null,
+      raw_response_keys: Object.keys(response.data)
+    });
+
+  } catch (error) {
+    console.error('DEBUG: Erro detalhado:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      headers: error.response?.headers
+    });
+
+    res.status(500).json({
+      success: false,
+      debug: true,
+      error: 'Erro na busca debug',
+      details: {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      }
+    });
+  }
+});
+
+// ====================================
 // SERVIDOR BACKEND - SPOTIFY RESEARCH
 // Configurado para Render.com
 // ====================================
@@ -175,8 +235,8 @@ app.get('/api/search', ensureSpotifyAuth, async (req, res) => {
       params: {
         q: q,
         type: 'track',
-        limit: limit,
-        market: 'BR'
+        limit: limit
+        // Removido market para evitar erro 403
       }
     });
 
@@ -347,8 +407,8 @@ app.get('/api/search-with-features', ensureSpotifyAuth, async (req, res) => {
       params: {
         q: q,
         type: 'track',
-        limit: limit,
-        market: 'BR'
+        limit: limit
+        // Removido market para evitar erro 403
       }
     });
 
