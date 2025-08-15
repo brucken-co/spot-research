@@ -1,126 +1,6 @@
 // ====================================
-// ROUTES - DEBUG
-// ====================================
-
-app.get('/api/debug/search', ensureSpotifyAuth, async (req, res) => {
-  try {
-    const { q = 'test' } = req.query;
-
-    console.log(`DEBUG: Buscando "${q}" com token: ${req.spotifyToken.substring(0, 10)}...`);
-
-    // Teste 1: Busca mais simples possível
-    const response = await axios.get(`${SPOTIFY_API_BASE}/search`, {
-      headers: {
-        'Authorization': `Bearer ${req.spotifyToken}`
-      },
-      params: {
-        q: q,
-        type: 'track',
-        limit: 1  // Apenas 1 resultado
-      }
-    });
-
-    console.log('DEBUG: Busca bem-sucedida!');
-
-    res.json({
-      success: true,
-      debug: true,
-      query: q,
-      token_prefix: req.spotifyToken.substring(0, 10),
-      total_found: response.data.tracks.total,
-      first_track: response.data.tracks.items[0] ? {
-        id: response.data.tracks.items[0].id,
-        name: response.data.tracks.items[0].name,
-        artist: response.data.tracks.items[0].artists[0].name
-      } : null,
-      raw_response_keys: Object.keys(response.data)
-    });
-
-  } catch (error) {
-    console.error('DEBUG: Erro detalhado:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      headers: error.response?.headers
-    });
-
-    res.status(500).json({
-      success: false,
-      debug: true,
-      error: 'Erro na busca debug',
-      details: {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message
-      }
-    });
-  }
-});
-
-// ====================================
-// ROUTES - DEBUG
-// ====================================
-
-app.get('/api/debug/search', ensureSpotifyAuth, async (req, res) => {
-  try {
-    const { q = 'test' } = req.query;
-
-    console.log(`DEBUG: Buscando "${q}" com token: ${req.spotifyToken.substring(0, 10)}...`);
-
-    // Teste 1: Busca mais simples possível
-    const response = await axios.get(`${SPOTIFY_API_BASE}/search`, {
-      headers: {
-        'Authorization': `Bearer ${req.spotifyToken}`
-      },
-      params: {
-        q: q,
-        type: 'track',
-        limit: 1  // Apenas 1 resultado
-      }
-    });
-
-    console.log('DEBUG: Busca bem-sucedida!');
-
-    res.json({
-      success: true,
-      debug: true,
-      query: q,
-      token_prefix: req.spotifyToken.substring(0, 10),
-      total_found: response.data.tracks.total,
-      first_track: response.data.tracks.items[0] ? {
-        id: response.data.tracks.items[0].id,
-        name: response.data.tracks.items[0].name,
-        artist: response.data.tracks.items[0].artists[0].name
-      } : null,
-      raw_response_keys: Object.keys(response.data)
-    });
-
-  } catch (error) {
-    console.error('DEBUG: Erro detalhado:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      headers: error.response?.headers
-    });
-
-    res.status(500).json({
-      success: false,
-      debug: true,
-      error: 'Erro na busca debug',
-      details: {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message
-      }
-    });
-  }
-});
-
-// ====================================
 // SERVIDOR BACKEND - SPOTIFY RESEARCH
-// Configurado para Render.com
+// Configurado para Render.com - VERSÃO CORRIGIDA
 // ====================================
 
 const express = require('express');
@@ -217,7 +97,7 @@ async function ensureSpotifyAuth(req, res, next) {
 
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'Spotify Research API',
+    message: 'Spotify Research API - FIXED VERSION',
     status: 'running',
     timestamp: new Date().toISOString(),
     endpoints: {
@@ -225,7 +105,10 @@ app.get('/', (req, res) => {
       auth: '/api/auth/test',
       search: '/api/search?q={query}',
       audioFeatures: '/api/audio-features?ids={track_ids}',
-      recommendations: '/api/recommendations?seed_tracks={track_id}'
+      recommendations: '/api/recommendations?seed_tracks={track_id}',
+      searchWithFeatures: '/api/search-with-features?q={query}',
+      recommendationsWithFeatures: '/api/recommendations-with-features?seed_tracks={track_id}',
+      debug: '/api/debug/search?q={query}'
     }
   });
 });
@@ -275,19 +158,16 @@ app.post('/api/auth/test', async (req, res) => {
 });
 
 // ====================================
-// ROUTES - SEARCH
+// ROUTES - DEBUG (ENDPOINT SEGURO)
 // ====================================
 
-app.get('/api/search', ensureSpotifyAuth, async (req, res) => {
+app.get('/api/debug/search', ensureSpotifyAuth, async (req, res) => {
   try {
-    const { q, limit = 10 } = req.query;
+    const { q = 'test' } = req.query;
 
-    if (!q) {
-      return res.status(400).json({ error: 'Query parameter "q" é obrigatório' });
-    }
+    console.log(`DEBUG: Buscando "${q}" com token: ${req.spotifyToken.substring(0, 10)}...`);
 
-    console.log(`Buscando: "${q}"`);
-
+    // Teste simples - busca sem market
     const response = await axios.get(`${SPOTIFY_API_BASE}/search`, {
       headers: {
         'Authorization': `Bearer ${req.spotifyToken}`
@@ -295,158 +175,48 @@ app.get('/api/search', ensureSpotifyAuth, async (req, res) => {
       params: {
         q: q,
         type: 'track',
-        limit: limit
-        // Removido market para evitar erro 403
+        limit: 1
       }
     });
 
-    const tracks = response.data.tracks.items.map(track => ({
-      id: track.id,
-      name: track.name,
-      artist: track.artists[0].name,
-      album: track.album.name,
-      image: track.album.images[0]?.url || null,
-      preview_url: track.preview_url,
-      external_urls: track.external_urls,
-      popularity: track.popularity
-    }));
+    console.log('DEBUG: Busca bem-sucedida!');
 
     res.json({
       success: true,
+      debug: true,
       query: q,
-      total: response.data.tracks.total,
-      tracks: tracks
+      token_prefix: req.spotifyToken.substring(0, 10),
+      total_found: response.data.tracks.total,
+      first_track: response.data.tracks.items[0] ? {
+        id: response.data.tracks.items[0].id,
+        name: response.data.tracks.items[0].name,
+        artist: response.data.tracks.items[0].artists[0].name
+      } : null
     });
 
   } catch (error) {
-    console.error('Erro na busca:', error.response?.data || error.message);
+    console.error('DEBUG: Erro detalhado:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data
+    });
+
     res.status(500).json({
       success: false,
-      error: 'Erro na busca',
-      details: error.response?.data || error.message
+      debug: true,
+      error: 'Erro na busca debug',
+      details: {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      }
     });
   }
 });
 
 // ====================================
-// ROUTES - AUDIO FEATURES
-// ====================================
-
-app.get('/api/audio-features', ensureSpotifyAuth, async (req, res) => {
-  try {
-    const { ids } = req.query;
-
-    if (!ids) {
-      return res.status(400).json({ error: 'Query parameter "ids" é obrigatório' });
-    }
-
-    console.log(`Obtendo audio features para: ${ids}`);
-
-    const response = await axios.get(`${SPOTIFY_API_BASE}/audio-features`, {
-      headers: {
-        'Authorization': `Bearer ${req.spotifyToken}`
-      },
-      params: { ids: ids }
-    });
-
-    res.json({
-      success: true,
-      audio_features: response.data.audio_features
-    });
-
-  } catch (error) {
-    console.error('Erro ao obter audio features:', error.response?.data || error.message);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao obter características musicais',
-      details: error.response?.data || error.message
-    });
-  }
-});
-
-// ====================================
-// ROUTES - RECOMMENDATIONS
-// ====================================
-
-app.get('/api/recommendations', ensureSpotifyAuth, async (req, res) => {
-  try {
-    const { 
-      seed_tracks, 
-      seed_artists, 
-      seed_genres,
-      limit = 15,
-      market = 'BR',
-      target_energy,
-      target_danceability,
-      target_valence,
-      target_acousticness,
-      target_instrumentalness,
-      target_tempo
-    } = req.query;
-
-    if (!seed_tracks && !seed_artists && !seed_genres) {
-      return res.status(400).json({ 
-        error: 'Pelo menos um seed (tracks, artists, ou genres) é obrigatório' 
-      });
-    }
-
-    console.log(`Gerando recomendações com seed_tracks: ${seed_tracks}`);
-
-    const params = {
-      limit: limit,
-      market: market
-    };
-
-    // Adicionar seeds
-    if (seed_tracks) params.seed_tracks = seed_tracks;
-    if (seed_artists) params.seed_artists = seed_artists;
-    if (seed_genres) params.seed_genres = seed_genres;
-
-    // Adicionar targets se fornecidos
-    if (target_energy) params.target_energy = target_energy;
-    if (target_danceability) params.target_danceability = target_danceability;
-    if (target_valence) params.target_valence = target_valence;
-    if (target_acousticness) params.target_acousticness = target_acousticness;
-    if (target_instrumentalness) params.target_instrumentalness = target_instrumentalness;
-    if (target_tempo) params.target_tempo = target_tempo;
-
-    const response = await axios.get(`${SPOTIFY_API_BASE}/recommendations`, {
-      headers: {
-        'Authorization': `Bearer ${req.spotifyToken}`
-      },
-      params: params
-    });
-
-    const recommendations = response.data.tracks.map(track => ({
-      id: track.id,
-      name: track.name,
-      artist: track.artists[0].name,
-      album: track.album.name,
-      image: track.album.images[0]?.url || null,
-      preview_url: track.preview_url,
-      external_urls: track.external_urls,
-      popularity: track.popularity
-    }));
-
-    res.json({
-      success: true,
-      total: recommendations.length,
-      seeds: response.data.seeds,
-      recommendations: recommendations
-    });
-
-  } catch (error) {
-    console.error('Erro nas recomendações:', error.response?.data || error.message);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao gerar recomendações',
-      details: error.response?.data || error.message
-    });
-  }
-});
-
-// ====================================
-// ROUTE COMBINADA - SEARCH + AUDIO FEATURES
+// ROUTES - SEARCH WITH FEATURES (SEM MARKET)
 // ====================================
 
 app.get('/api/search-with-features', ensureSpotifyAuth, async (req, res) => {
@@ -459,7 +229,7 @@ app.get('/api/search-with-features', ensureSpotifyAuth, async (req, res) => {
 
     console.log(`Busca completa: "${q}"`);
 
-    // 1. Buscar tracks
+    // 1. Buscar tracks (SEM market para evitar 403)
     const searchResponse = await axios.get(`${SPOTIFY_API_BASE}/search`, {
       headers: {
         'Authorization': `Bearer ${req.spotifyToken}`
@@ -468,7 +238,6 @@ app.get('/api/search-with-features', ensureSpotifyAuth, async (req, res) => {
         q: q,
         type: 'track',
         limit: limit
-        // Removido market para evitar erro 403
       }
     });
 
@@ -522,7 +291,7 @@ app.get('/api/search-with-features', ensureSpotifyAuth, async (req, res) => {
 });
 
 // ====================================
-// ROUTE COMBINADA - RECOMMENDATIONS + AUDIO FEATURES
+// ROUTES - RECOMMENDATIONS WITH FEATURES (SEM MARKET)
 // ====================================
 
 app.get('/api/recommendations-with-features', ensureSpotifyAuth, async (req, res) => {
@@ -530,7 +299,6 @@ app.get('/api/recommendations-with-features', ensureSpotifyAuth, async (req, res
     const { 
       seed_tracks,
       limit = 15,
-      market = 'BR',
       target_energy,
       target_danceability,
       target_valence,
@@ -547,8 +315,7 @@ app.get('/api/recommendations-with-features', ensureSpotifyAuth, async (req, res
 
     const params = {
       seed_tracks: seed_tracks,
-      limit: limit,
-      market: market
+      limit: limit
     };
 
     // Adicionar targets se fornecidos
@@ -559,7 +326,7 @@ app.get('/api/recommendations-with-features', ensureSpotifyAuth, async (req, res
     if (target_instrumentalness) params.target_instrumentalness = target_instrumentalness;
     if (target_tempo) params.target_tempo = target_tempo;
 
-    // 1. Obter recomendações
+    // 1. Obter recomendações (SEM market)
     const recResponse = await axios.get(`${SPOTIFY_API_BASE}/recommendations`, {
       headers: {
         'Authorization': `Bearer ${req.spotifyToken}`
@@ -663,12 +430,9 @@ app.use((req, res) => {
       'GET /',
       'GET /health',
       'POST /api/auth/test',
-      'GET /api/search?q={query}',
-      'GET /api/audio-features?ids={track_ids}',
-      'GET /api/recommendations?seed_tracks={track_id}',
+      'GET /api/debug/search?q={query}',
       'GET /api/search-with-features?q={query}',
-      'GET /api/recommendations-with-features?seed_tracks={track_id}',
-      'GET /api/debug/search?q={query}'
+      'GET /api/recommendations-with-features?seed_tracks={track_id}'
     ]
   });
 });
