@@ -29,6 +29,53 @@ app.use((req, res, next) => {
 });
 
 // ====================================
+// ROUTES - DEBUG AUDIO FEATURES
+// ====================================
+
+app.get('/api/debug/audio-features', ensureSpotifyAuth, async (req, res) => {
+  try {
+    // Usar um track ID real que sabemos que existe
+    const trackId = '2QTDuJIGKUjR7E2Q6KupIh'; // Track do teste anterior
+
+    console.log(`DEBUG: Testando audio-features para track: ${trackId}`);
+
+    const response = await axios.get(`${SPOTIFY_API_BASE}/audio-features/${trackId}`, {
+      headers: {
+        'Authorization': `Bearer ${req.spotifyToken}`
+      }
+    });
+
+    console.log('DEBUG: Audio features obtidas com sucesso!');
+
+    res.json({
+      success: true,
+      debug: true,
+      track_id: trackId,
+      audio_features: response.data
+    });
+
+  } catch (error) {
+    console.error('DEBUG: Erro em audio-features:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data
+    });
+
+    res.status(500).json({
+      success: false,
+      debug: true,
+      error: 'Erro ao obter audio features',
+      details: {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      }
+    });
+  }
+});
+
+// ====================================
 // SPOTIFY CONFIGURATION
 // ====================================
 
@@ -108,7 +155,8 @@ app.get('/', (req, res) => {
       recommendations: '/api/recommendations?seed_tracks={track_id}',
       searchWithFeatures: '/api/search-with-features?q={query}',
       recommendationsWithFeatures: '/api/recommendations-with-features?seed_tracks={track_id}',
-      debug: '/api/debug/search?q={query}'
+      debug: '/api/debug/search?q={query}',
+      debugAudioFeatures: '/api/debug/audio-features'
     }
   });
 });
@@ -431,6 +479,7 @@ app.use((req, res) => {
       'GET /health',
       'POST /api/auth/test',
       'GET /api/debug/search?q={query}',
+      'GET /api/debug/audio-features',
       'GET /api/search-with-features?q={query}',
       'GET /api/recommendations-with-features?seed_tracks={track_id}'
     ]
